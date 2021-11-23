@@ -21,11 +21,16 @@ class Variable:
         funcs = [self.creator]
         while funcs:
             f = funcs.pop()
-            x, y = f.input, f.output
-            x.grad = f.backward(y.grad)
+            gys = [output.grad for output in f.outputs]
+            gxs = f.backward(*gys)
+            if not isinstance(gxs, tuple):
+                gxs = (gxs,)
+            
+            for x, gx in zip(f.inputs, gxs):
+                x.grad = gx
 
-            if x.creator is not None:
-                funcs.append(x.creator)
+                if x.creator is not None:
+                    funcs.append(x.creator)
 
 
 class Function:
@@ -53,17 +58,23 @@ class Add(Function):
     def forward(self, x0, x1):
         y = x0 + x1
         return y
-
-
-# class Square(Function):
-#     def forward(self, x):
-#         y = x ** 2
-#         return y
     
-#     def backward(self, gy):
-#         x = self.input.data
-#         gx = 2 * x * gy
-#         return gx
+    def backward(self, gy):
+        return gy, gy
+
+
+def add(x0, x1):
+    return Add()(x0, x1)
+
+class Square(Function):
+    def forward(self, x):
+        y = x ** 2
+        return y
+    
+    def backward(self, gy):
+        x = self.inputs[0].data
+        gx = 2 * x * gy
+        return gx
 
 
 # class Exp(Function):
@@ -85,8 +96,8 @@ class Add(Function):
 #     return (y1.data - y0.data) / (2 * eps)
 
 
-# def square(x):
-#     return Square()(x)
+def square(x):
+    return Square()(x)
 
 
 # def exp(x):
@@ -100,8 +111,10 @@ def as_array(x):
 
 
 if __name__ == "__main__":
-    x0 = Variable(np.array(2))
-    x1 = Variable(np.array(3))
-    f = Add()
-    y = f(x0, x1)
-    print(y.data)
+    x = Variable(np.array(2))
+    y = Variable(np.array(3))
+    z = add(square(x), square(y))
+    z.backward()
+    print(z.data)
+    print(x.grad)
+    print(y.grad)
