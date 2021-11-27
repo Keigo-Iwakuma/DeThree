@@ -1,27 +1,25 @@
-import math
 import numpy as np
-from dethree import Variable, Function
-from dethree.utils import plot_dot_graph
-
-
-def f(x):
-    y = x ** 4 - 2 * x ** 2
-    return y
+import matplotlib.pyplot as plt
+from dethree import Variable
+import dethree.functions as F
+# from dethree.utils import plot_dot_graph
 
 
 if __name__ == "__main__":
-    x = Variable(np.array(2.0))
-    iters = 10
+    x = Variable(np.linspace(-7, 7, 200))
+    y = F.sin(x)
+    y.backward(create_graph=True)
 
-    for i in range(iters):
-        print(i, x)
-        y = f(x)
-        x.cleargrad()
-        y.backward(create_graph=True)
+    logs = [y.data.flatten()]
 
+    for i in range(3):
+        logs.append(x.grad.data.flatten())
         gx = x.grad
         x.cleargrad()
-        gx.backward()
-        gx2 = x.grad
-
-        x.data -= gx.data / gx2.data
+        gx.backward(create_graph=True)
+    
+    labels = ["y=sin(x)", "y'", "y''", "y'''"]
+    for i, v in enumerate(logs):
+        plt.plot(x.data, logs[i], label=labels[i])
+    plt.legend(loc="lower right")
+    plt.show()
