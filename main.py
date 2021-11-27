@@ -9,20 +9,19 @@ def f(x):
     return y
 
 
-def gx2(x):
-    return 12 * x ** 2 - 4
-
-
 if __name__ == "__main__":
     x = Variable(np.array(2.0))
     iters = 10
 
     for i in range(iters):
         print(i, x)
-
         y = f(x)
-
         x.cleargrad()
-        y.backward()
+        y.backward(create_graph=True)
 
-        x.data -= x.grad / gx2(x.data)
+        gx = x.grad
+        x.cleargrad()
+        gx.backward()
+        gx2 = x.grad
+
+        x.data -= gx.data / gx2.data
