@@ -3,6 +3,9 @@ import weakref
 import numpy as np
 
 
+# ======================================================================
+# Config
+# ======================================================================
 class Config:
     enable_backprop = True
 
@@ -21,6 +24,9 @@ def no_grad():
     return using_config("enable_backprop", False)
 
 
+# ======================================================================
+# Variable / Function
+# ======================================================================
 class Variable:
     __array_priority__ = 200
 
@@ -64,6 +70,9 @@ class Variable:
         self.creator = func
         self.generation = func.generation + 1
     
+    def cleargrad(self):
+        self.grad = None
+    
     def backward(self, retain_grad=False):
         if self.grad is None:
             self.grad = np.ones_like(self.data)
@@ -98,9 +107,18 @@ class Variable:
             if not retain_grad:
                 for y in f.outputs:
                     y().grad = None
-    
-    def cleargrad(self):
-        self.grad = None
+
+
+def as_array(x):
+    if np.isscalar(x):
+        return np.array(x)
+    return x
+
+
+def as_variable(obj):
+    if isinstance(obj, Variable):
+        return obj 
+    return Variable(obj)
 
 
 class Function:
@@ -117,8 +135,9 @@ class Function:
             self.generation = max([x.generation for x in inputs])
             for output in outputs:
                 output.set_creator(self)
-        self.inputs = inputs
-        self.outputs = [weakref.ref(output) for output in outputs]
+            self.inputs = inputs
+            self.outputs = [weakref.ref(output) for output in outputs]
+
         return outputs if len(outputs) > 1 else outputs[0]
     
     def forward(self, xs):
@@ -128,6 +147,9 @@ class Function:
         raise NotImplementedError()
 
 
+# ======================================================================
+# Four Arithmetic Operations / Operator Overload
+# ======================================================================
 class Add(Function):
     def forward(self, x0, x1):
         y = x0 + x1
@@ -140,10 +162,6 @@ class Add(Function):
 def add(x0, x1):
     x1 = as_array(x1)
     return Add()(x0, x1)
-
-
-Variable.__add__ = add
-Variable.__radd__ = add
 
 
 class Mul(Function):
@@ -178,7 +196,7 @@ class Sub(Function):
         y = x0 - x1
         return y
     
-    def backward(gy):
+    def backward(self, gy):
         return gy, -gy
 
 
@@ -225,24 +243,13 @@ class Pow(Function):
     def backward(self, gy):
         x = self.inputs[0].data
         c = self.c
+
         gx = c * x ** (c - 1) * gy
         return gx
     
 
 def pow(x, c):
     return Pow(c)(x)
-
-
-def as_array(x):
-    if np.isscalar(x):
-        return np.array(x)
-    return x
-
-
-def as_variable(obj):
-    if isinstance(obj, Variable):
-        return obj 
-    return Variable(obj)
 
 
 def setup_variable():
