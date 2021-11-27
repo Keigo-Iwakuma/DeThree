@@ -1,5 +1,6 @@
+import math
 import numpy as np
-from dethree import Variable
+from dethree import Variable, Function
 from dethree.utils import plot_dot_graph
 
 
@@ -19,13 +20,38 @@ def goldstein(x, y):
     return z
 
 
-if __name__ == "__main__":
-    x = Variable(np.array(1.0))
-    y = Variable(np.array(1.0))
-    z = goldstein(x, y)
-    z.backward()
+class Sin(Function):
+    def forward(self, x):
+        y = np.sin(x)
+        return y
+    
+    def backward(self, gy):
+        x = self.inputs[0].data
+        gx = gy * np.cos(x)
+        return gx
 
-    x.name = "x"
-    y.name = "y"
-    z.name = "z"
-    plot_dot_graph(z, verbose=False, to_file="goldstein.png")
+
+def sin(x):
+    return Sin()(x)
+
+
+def my_sin(x, threshold=1e-4):
+    y = 0
+    for i in range(int(1e5)):
+        c = (-1) ** i / math.factorial(2 * i + 1)
+        t = c * x ** (2 * i + 1)
+        y = y + t
+        if abs(t.data) < threshold:
+            break
+    return y
+
+
+if __name__ == "__main__":
+    x = Variable(np.array(np.pi / 4))
+    y = my_sin(x)
+    y.backward()
+
+    print(y.data)
+    print(x.grad)
+
+    plot_dot_graph(y, verbose=False, to_file="my_sin.png")
