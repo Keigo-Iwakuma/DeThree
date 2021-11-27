@@ -1,5 +1,6 @@
 import numpy as np
 from dethree import Variable
+from dethree.utils import plot_dot_graph
 
 
 def sphere(x, y):
@@ -24,4 +25,7 @@ if __name__ == "__main__":
     z = goldstein(x, y)
     z.backward()
 
-    print(x.grad, y.grad)
+    x.name = "x"
+    y.name = "y"
+    z.name = "z"
+    plot_dot_graph(z, verbose=False, to_file="goldstein.png")
