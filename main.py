@@ -5,12 +5,9 @@ from dethree.utils import plot_dot_graph
 
 
 if __name__ == "__main__":
-    x = Variable(np.array(2.0))
-    y = x ** 2
-    y.backward(create_graph=True)
-    gx = x.grad
-    x.cleargrad()
-
-    z = gx ** 3 + y
-    z.backward()
+    x = Variable(np.array([[1,2,3,],[4,5,6,]]))
+    x = x.reshape(2, 3)
+    x = x.T
+    y = F.transpose(x)
+    y.backward(retain_grad=True)
     print(x.grad)
