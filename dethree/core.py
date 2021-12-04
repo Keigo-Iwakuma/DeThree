@@ -1,11 +1,12 @@
 import contextlib
 import weakref
 import numpy as np
+import dethree
 
 
-# ======================================================================
+# ================================================================================
 # Config
-# ======================================================================
+# ================================================================================
 class Config:
     enable_backprop = True
 
@@ -24,9 +25,9 @@ def no_grad():
     return using_config("enable_backprop", False)
 
 
-# ======================================================================
+# ================================================================================
 # Variable / Function
-# ======================================================================
+# ================================================================================
 class Variable:
     __array_priority__ = 200
 
@@ -65,6 +66,26 @@ class Variable:
             return "variable(None)"
         p = str(self.data).replace("\n", "\n" + " " * 9)
         return "variable(" + p + ")"
+    
+    def reshape(self, *shape):
+        if len(shape) == 1 and isinstance(shape[0], (tuple, list)):
+            shape = shape[0]
+        return dethree.functions.reshape(self, shape)
+    
+    def transpose(self, *axes):
+        if len(axes) == 0:
+            axes = None
+        elif len(axes) == 1:
+            if isinstance(axes[0], (tuple, list)) or axes[0] is None:
+                axes = axes[0]
+        return dethree.functions.transpose(self, axes)
+    
+    @property
+    def T(self):
+        return dethree.functions.transpose(self)
+    
+    def sum(self, axis=None, keepdims=False):
+        return dethree.functions.sum(self, axis, keepdims)
     
     def set_creator(self, func):
         self.creator = func
@@ -149,16 +170,21 @@ class Function:
         raise NotImplementedError()
 
 
-# ======================================================================
+# ================================================================================
 # Four Arithmetic Operations / Operator Overload
-# ======================================================================
+# ================================================================================
 class Add(Function):
     def forward(self, x0, x1):
+        self.x0_shape, self.x1_shape = x0.shape, x1.shape
         y = x0 + x1
         return y
     
     def backward(self, gy):
-        return gy, gy
+        gx0, gx1 = gy, gy
+        if self.x0_shape != self.x1_shape:
+            gx0 = dethree.functions.sum_to(gx0, self.x0_shape)
+            gx1 = dethree.functions.sum_to(gx1, self.x1_shape)
+        return gx0, gx1
 
 
 def add(x0, x1):

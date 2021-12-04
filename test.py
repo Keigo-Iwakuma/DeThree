@@ -3,7 +3,7 @@ import unittest
 
 import os
 import sys
-from variable import Variable, square, numerical_diff
+from main import Variable, square, numerical_diff
 
 
 class SquareTest(unittest.TestCase):
