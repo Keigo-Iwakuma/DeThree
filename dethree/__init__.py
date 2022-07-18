@@ -20,5 +20,7 @@ else:
         as_variable,
         setup_variable,
     )
+    import dethree.functions
+    import dethree.utils
 
 setup_variable()
